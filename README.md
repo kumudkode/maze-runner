@@ -1,5 +1,5 @@
 Maze Runner
-<img alt="Maze Runner" src="https://placeholder-for-maze-screenshot.png/">
+🪄🔮
 Interactive Maze Generator & Solver with Algorithm Visualization
 Maze Runner is a fully interactive web application that generates random mazes and visualizes pathfinding algorithms in real-time. Built with vanilla JavaScript, CSS, and HTML, this project demonstrates advanced front-end techniques without relying on any external libraries or frameworks.
 
@@ -22,9 +22,7 @@ Mobile Responsive: Fully playable on devices of all sizes
 
 
 Light Mode	Dark Mode	Solving Visualization
-<img alt="Light Mode" src="https://placeholder-light-mode.png/">
-<img alt="Dark Mode" src="https://placeholder-dark-mode.png/">
-<img alt="Solving" src="https://placeholder-solving.png/">
+☀️🌑
 
 🔧 Technologies Used
 HTML5
