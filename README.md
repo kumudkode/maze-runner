@@ -37,7 +37,7 @@ Check out the live demo: Maze Runner Demo
 ⚙️ Installation
 Clone this repository:
 =========================================================
-git clone https://github.com/yourusername/maze-runner.git
+git clone https://github.com/kumudkode/maze-runner.git
 =========================================================
 
 Navigate to the project directory:
