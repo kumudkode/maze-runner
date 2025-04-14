@@ -508,6 +508,105 @@ body.dark-theme .timer {
     transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
 }
 
+/* Mobile Controls */
+.mobile-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 150;
+    display: none; /* Hidden by default, shown only on mobile */
+}
+
+.d-pad {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 5px;
+}
+
+.d-btn {
+    background: rgba(255, 255, 255, 0.8);
+    border: none;
+    border-radius: 12px;
+    color: var(--primary-dark);
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.d-btn:active {
+    transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.d-btn span {
+    display: block;
+    font-weight: bold;
+}
+
+.up-btn {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.right-btn {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.down-btn {
+    grid-column: 2;
+    grid-row: 3;
+}
+
+.left-btn {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+/* Show mobile controls only on touch devices or small screens */
+@media (max-width: 768px), (hover: none) {
+    .mobile-controls {
+        display: block;
+    }
+    
+    /* Adjust maze container to make room for controls */
+    .maze-container {
+        padding-bottom: 180px;
+    }
+    
+    /* Make all buttons larger for better touch targets */
+    .btn {
+        padding: 0.8rem 1.6rem;
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Adjust maze size for better viewing on mobile */
+    :root {
+        --cell-size: max(16px, min(22px, calc(100vw / 24)));
+    }
+}
+
+/* Dark theme support for mobile controls */
+body.dark-theme .d-btn {
+    background: rgba(45, 55, 72, 0.8);
+    color: var(--light);
+}
+
+body.dark-theme .d-btn:active {
+    background: rgba(45, 55, 72, 0.95);
+}
+
 /* Media queries */
 @media (max-width: 768px) {
     :root {

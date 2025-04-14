@@ -340,36 +340,97 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
     }
     
-    // Handle keyboard navigation
-    function handleKeyPress(e) {
-        if (solving) return;
-        
-        // Add this line to prevent default scrolling behavior
-        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+    // Mobile touch controls
+    const mazeContainer = document.querySelector('.maze-container');
+    const dButtons = document.querySelectorAll('.d-btn');
+    
+    // Define touch variables
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    const minSwipeDistance = 50; // Minimum distance for a swipe to register
+    
+    // Add event listeners for the on-screen d-pad buttons
+    dButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const direction = button.dataset.direction;
+            handleDirectionalInput(direction);
+        });
+    });
+    
+    // Add touch event listeners for swipe detection
+    mazeElement.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: false });
+    
+    mazeElement.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+    }, { passive: false });
+    
+    // Prevent default touchmove behavior to avoid scrolling while trying to swipe
+    mazeElement.addEventListener('touchmove', (e) => {
+        if (Math.abs(e.changedTouches[0].screenY - touchStartY) > 10) {
             e.preventDefault();
         }
+    }, { passive: false });
+    
+    // Handle swipe gestures
+    function handleSwipe() {
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        
+        // Check if the swipe is long enough
+        if (Math.abs(deltaX) < minSwipeDistance && Math.abs(deltaY) < minSwipeDistance) {
+            return; // Not a swipe, probably a tap
+        }
+        
+        // Determine swipe direction (use the largest delta)
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // Horizontal swipe
+            if (deltaX > 0) {
+                handleDirectionalInput('right');
+            } else {
+                handleDirectionalInput('left');
+            }
+        } else {
+            // Vertical swipe
+            if (deltaY > 0) {
+                handleDirectionalInput('down');
+            } else {
+                handleDirectionalInput('up');
+            }
+        }
+    }
+    
+    // Process directional input from either keyboard, swipe, or buttons
+    function handleDirectionalInput(direction) {
+        if (solving) return;
         
         let newX = playerPosition.x;
         let newY = playerPosition.y;
         
-        switch (e.key) {
-            case 'ArrowUp':
+        switch (direction) {
+            case 'up':
                 if (!maze[playerPosition.y][playerPosition.x].walls.top) newY--;
                 break;
-            case 'ArrowRight':
+            case 'right':
                 if (!maze[playerPosition.y][playerPosition.x].walls.right) newX++;
                 break;
-            case 'ArrowDown':
+            case 'down':
                 if (!maze[playerPosition.y][playerPosition.x].walls.bottom) newY++;
                 break;
-            case 'ArrowLeft':
+            case 'left':
                 if (!maze[playerPosition.y][playerPosition.x].walls.left) newX--;
                 break;
             default:
                 return;
         }
         
-        // Check if valid move
+        // Check if valid move and update player position (existing move logic)
         if (newX >= 0 && newX < size && newY >= 0 && newY < size) {
             moveCount++;
             moveCounter.textContent = `Moves: ${moveCount}`;
@@ -409,6 +470,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     generateMaze();
                 }, 300);
             }
+        }
+    }
+    
+    // Handle keyboard navigation
+    function handleKeyPress(e) {
+        if (solving) return;
+        
+        // Add this line to prevent default scrolling behavior
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+            e.preventDefault();
+        }
+        
+        switch (e.key) {
+            case 'ArrowUp':
+                handleDirectionalInput('up');
+                break;
+            case 'ArrowRight':
+                handleDirectionalInput('right');
+                break;
+            case 'ArrowDown':
+                handleDirectionalInput('down');
+                break;
+            case 'ArrowLeft':
+                handleDirectionalInput('left');
+                break;
+            default:
+                return;
         }
     }
     
