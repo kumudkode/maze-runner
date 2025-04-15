@@ -324,15 +324,21 @@ input[type="range"] {
   transition: all 0.15s ease;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   -webkit-tap-highlight-color: transparent;
+  border-radius: 12px;
+  touch-action: manipulation; /* Prevent browser handling of gestures */
 }
 
 .d-btn:active, .d-btn.pressed {
   transform: scale(0.92) translateY(4px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: rgba(52, 152, 219, 0.85);
+  color: white;
 }
 
 .d-btn span {
   display: block;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Button positions and shapes */
@@ -549,6 +555,88 @@ body.dark-theme .theme-btn {
   .move-counter {
     top: -30px;
     font-size: 0.8rem;
+  }
+  
+  .d-pad {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  
+  .d-btn {
+    background: rgba(255, 255, 255, 0.85);
+    border: none;
+    color: var(--dark);
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    -webkit-tap-highlight-color: transparent;
+    border-radius: 12px;
+    touch-action: manipulation; /* Prevent browser handling of gestures */
+  }
+  
+  .d-btn.pressed {
+    transform: scale(0.92) translateY(4px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: rgba(52, 152, 219, 0.85);
+    color: white;
+  }
+  
+  .d-btn span {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  /* Button positions and shapes */
+  .up-btn {
+    grid-column: 2;
+    grid-row: 1;
+    border-radius: 50% 50% 12px 12px;
+  }
+  
+  .right-btn {
+    grid-column: 3;
+    grid-row: 2;
+    border-radius: 50% 50% 50% 12px;
+  }
+  
+  .down-btn {
+    grid-column: 2;
+    grid-row: 3;
+    border-radius: 12px 12px 50% 50%;
+  }
+  
+  .left-btn {
+    grid-column: 1;
+    grid-row: 2;
+    border-radius: 50% 12px 50% 50%;
+  }
+  
+  /* Fix mobile maze visibility */
+  .maze-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  #maze-wrapper {
+    margin: 0 auto;
+    overflow: visible;
+  }
+  
+  /* Make sure the maze is visible within the viewport */
+  #maze {
+    margin: 0 auto;
+    max-width: 100%;
   }
 }
 

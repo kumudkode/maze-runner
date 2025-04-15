@@ -485,36 +485,135 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (isMobile) {
             // Show touch controls
-            document.querySelector('.mobile-controls').style.display = 'block';
+            const mobileControls = document.querySelector('.mobile-controls');
+            mobileControls.style.display = 'block';
+            
+            // Create D-pad if it doesn't exist
+            if (!mobileControls.querySelector('.d-pad')) {
+                const dPad = document.createElement('div');
+                dPad.className = 'd-pad';
+                
+                // Create D-pad buttons
+                const directions = [
+                    { dir: 'up', text: '↑', class: 'up-btn' },
+                    { dir: 'right', text: '→', class: 'right-btn' },
+                    { dir: 'down', text: '↓', class: 'down-btn' },
+                    { dir: 'left', text: '←', class: 'left-btn' }
+                ];
+                
+                directions.forEach(d => {
+                    const btn = document.createElement('button');
+                    btn.className = `d-btn ${d.class}`;
+                    btn.dataset.direction = d.dir;
+                    
+                    const span = document.createElement('span');
+                    span.textContent = d.text;
+                    btn.appendChild(span);
+                    
+                    dPad.appendChild(btn);
+                });
+                
+                mobileControls.appendChild(dPad);
+            }
             
             // Show swipe hint for first-time users
             showSwipeHint();
         }
         
-        // Add event listeners for mobile d-pad
+        // Add debounced event listeners for mobile d-pad
         const dPad = document.querySelector('.d-pad');
         if (dPad) {
+            // Remove existing listeners first to prevent duplicates
             const buttons = dPad.querySelectorAll('.d-btn');
             buttons.forEach(btn => {
+                btn.replaceWith(btn.cloneNode(true));
+            });
+            
+            // Add new listeners with mobile-specific handling
+            const newButtons = dPad.querySelectorAll('.d-btn');
+            
+            // Track if we're currently processing a move
+            let isMoving = false;
+            
+            newButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (isMoving || solving || isPaused) return;
+                    
+                    isMoving = true;
                     const direction = btn.dataset.direction;
+                    
+                    // Add visual feedback
+                    btn.classList.add('pressed');
+                    setTimeout(() => btn.classList.remove('pressed'), 200);
                     
                     switch (direction) {
                         case 'up':
-                            movePlayer(0, -1, 'top');
+                            movePlayerMobile(0, -1, 'top');
                             break;
                         case 'right':
-                            movePlayer(1, 0, 'right');
+                            movePlayerMobile(1, 0, 'right');
                             break;
                         case 'down':
-                            movePlayer(0, 1, 'bottom');
+                            movePlayerMobile(0, 1, 'bottom');
                             break;
                         case 'left':
-                            movePlayer(-1, 0, 'left');
+                            movePlayerMobile(-1, 0, 'left');
                             break;
                     }
+                    
+                    // Reset the moving state after a delay
+                    setTimeout(() => {
+                        isMoving = false;
+                    }, 300);
                 });
             });
+        }
+    }
+
+    // Create a mobile-specific version of movePlayer that uses more direct DOM manipulation
+    function movePlayerMobile(dx, dy, wallDirection) {
+        // Check if there's a wall in the direction we want to move
+        if (maze[playerPosition.y][playerPosition.x].walls[wallDirection]) {
+            return; // Can't move through walls
+        }
+        
+        // Calculate new position
+        const newX = playerPosition.x + dx;
+        const newY = playerPosition.y + dy;
+        
+        // Check if valid position
+        if (newX >= 0 && newX < size && newY >= 0 && newY < size) {
+            // Update move counter
+            moveCount++;
+            moveCounter.textContent = `Moves: ${moveCount}`;
+            
+            // Remove player from current cell
+            const currentCell = document.querySelector(`.cell[data-x="${playerPosition.x}"][data-y="${playerPosition.y}"]`);
+            if (currentCell) {
+                currentCell.classList.remove('current');
+                const player = currentCell.querySelector('.player');
+                if (player) player.remove();
+            }
+            
+            // Update player position
+            playerPosition.x = newX;
+            playerPosition.y = newY;
+            
+            // Find the new cell
+            const newCell = document.querySelector(`.cell[data-x="${newX}"][data-y="${newY}"]`);
+            
+            if (newCell) {
+                // Make it the current cell
+                newCell.classList.add('current');
+                
+                // Add player to the new cell
+                const newPlayer = document.createElement('div');
+                newPlayer.classList.add('player');
+                newCell.appendChild(newPlayer);
+                
+                // Check if we've reached the goal
+                checkVictory();
+            }
         }
     }
     
