@@ -15,8 +15,6 @@
   
   /* Walls & Floor */
   --wall-color: #34495e;
-  --wall-highlight: #4a5568;
-  --wall-shadow: #2d3748;
   --floor-color: #f5f5f5;
   
   /* Dark theme */
@@ -26,10 +24,8 @@
   /* Sizing */
   --base-cell-size: 24px;
   --cell-size: var(--base-cell-size);
+  --maze-size: 15;
   --wall-thickness: 2px;
-  
-  /* Animation */
-  --transition-speed: 300ms;
 }
 
 /* === Global Styles === */
@@ -45,7 +41,7 @@ body {
   color: var(--dark);
   line-height: 1.6;
   min-height: 100vh;
-  transition: background var(--transition-speed) ease;
+  transition: background 0.3s ease;
 }
 
 .container {
@@ -147,31 +143,26 @@ input[type="range"] {
   justify-content: center;
   align-items: center;
   width: fit-content;
-  overflow: visible;
-  padding: 20px;
 }
 
 #maze-wrapper {
   position: relative;
   transition: all 0.5s ease;
-  transform-style: preserve-3d;
-  transform: rotateX(0deg); /* Default 2D view */
 }
 
-.view-3d #maze-wrapper {
-  transform: rotateX(45deg);
-}
-
+/* Fixed maze grid display */
 #maze {
   display: grid;
   grid-template-columns: repeat(var(--maze-size, 15), var(--cell-size));
   grid-template-rows: repeat(var(--maze-size, 15), var(--cell-size));
-  position: relative;
-  z-index: 1;
   background-color: var(--floor-color);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
   border-radius: 4px;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  margin: 0 auto;
 }
 
 /* === Cells === */
@@ -183,7 +174,7 @@ input[type="range"] {
   transition: background-color 0.3s ease;
 }
 
-/* Walls */
+/* Wall styling */
 .cell.wall-top {
   border-top: var(--wall-thickness) solid var(--wall-color);
 }
@@ -200,7 +191,7 @@ input[type="range"] {
   border-left: var(--wall-thickness) solid var(--wall-color);
 }
 
-/* Player & Path */
+/* Cell states */
 .cell.current {
   background-color: rgba(52, 152, 219, 0.1);
 }
@@ -214,14 +205,50 @@ input[type="range"] {
   animation: pulse-path 2s infinite;
 }
 
-.cell.start {
+/* Start and End points - now contained within cells */
+.start-marker, .end-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70%;
+  height: 70%;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.start-marker {
   background-color: rgba(52, 152, 219, 0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.cell.end {
+.end-marker {
   background-color: rgba(231, 76, 60, 0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
+.start-marker::after, .end-marker::after {
+  content: '';
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  position: absolute;
+}
+
+.start-marker::after {
+  background-color: var(--primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.end-marker::after {
+  background-color: var(--secondary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Player styling */
 .player {
   position: absolute;
   top: 50%;
@@ -232,10 +259,11 @@ input[type="range"] {
   background-color: var(--primary);
   border-radius: 50%;
   z-index: 10;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   animation: pulse 2s infinite ease-in-out;
 }
 
+/* Trail effect */
 .trail {
   position: absolute;
   width: 30%;
@@ -249,20 +277,19 @@ input[type="range"] {
   animation: fade-out 1s forwards;
 }
 
-/* Move Counter */
+/* Move counter - fixed position */
 .move-counter {
   position: absolute;
-  top: 15px;
-  left: 15px;
+  top: -40px;
+  left: 0;
   background-color: rgba(255, 255, 255, 0.9);
   color: var(--dark);
   padding: 8px 15px;
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 500;
-  z-index: 100;
+  z-index: 20;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
 }
 
 /* === Mobile Controls === */
@@ -306,7 +333,6 @@ input[type="range"] {
 
 .d-btn span {
   display: block;
-  pointer-events: none;
 }
 
 /* Button positions and shapes */
@@ -333,12 +359,6 @@ input[type="range"] {
   grid-row: 2;
   border-radius: 50% 12px 50% 50%;
 }
-
-/* Button animations */
-.up-btn span { animation: float-up 2s ease-in-out infinite; }
-.right-btn span { animation: float-right 2s ease-in-out infinite; }
-.down-btn span { animation: float-down 2s ease-in-out infinite; }
-.left-btn span { animation: float-left 2s ease-in-out infinite; }
 
 /* === Stats and Footer === */
 .stats {
@@ -390,24 +410,14 @@ input[type="range"] {
   100% { opacity: 0; transform: translate(-50%, -50%) scale(2); }
 }
 
-@keyframes float-up {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-}
-
-@keyframes float-right {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(3px); }
-}
-
-@keyframes float-down {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(3px); }
-}
-
-@keyframes float-left {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(-3px); }
+/* Confetti animation */
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--confetti-color, var(--primary));
+  border-radius: 2px;
+  z-index: 50;
 }
 
 @keyframes confetti {
@@ -415,16 +425,7 @@ input[type="range"] {
   100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
 
-.confetti-piece {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background: var(--confetti-color, var(--primary));
-  border-radius: 2px;
-  z-index: 200;
-}
-
-/* Swipe hint animation */
+/* Swipe hint for mobile */
 .swipe-hint {
   position: absolute;
   top: 50%;
@@ -536,13 +537,18 @@ body.dark-theme .theme-btn {
     margin-bottom: 180px;
   }
   
-  /* Make the maze appear flat on mobile by default */
+  /* Always flat on mobile */
   #maze-wrapper {
     transform: rotateX(0deg);
   }
   
   .view-3d #maze-wrapper {
-    transform: rotateX(25deg);
+    transform: rotateX(15deg);
+  }
+  
+  .move-counter {
+    top: -30px;
+    font-size: 0.8rem;
   }
 }
 
@@ -571,4 +577,100 @@ body.dark-theme .theme-btn {
     max-width: 250px;
     text-align: center;
   }
+  
+  .move-counter {
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+}
+
+/* Responsive design improvements */
+@media (max-width: 768px) {
+    :root {
+        --cell-size: max(10px, min(18px, calc((100vw - 40px) / var(--maze-size))));
+    }
+    
+    .maze-container {
+        width: 100%;
+        overflow-x: auto;
+        padding: 10px 0;
+    }
+    
+    #maze-wrapper {
+        margin: 0 auto;
+    }
+    
+    .move-counter {
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+/* Game completion overlay */
+.level-complete {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 4px;
+}
+
+.level-complete h2 {
+  color: var(--primary-dark);
+  margin-bottom: 15px;
+}
+
+.stats-summary {
+  background-color: var(--light);
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.stats-summary p {
+  margin: 5px 0;
+  font-weight: 500;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Congratulations message */
+.congrats-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.9);
+  color: var(--primary-dark);
+  padding: 20px 40px;
+  font-size: 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  animation: pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Animation for the congratulations message */
+@keyframes pop-in {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* Dark theme adjustment for congratulations message */
+body.dark-theme .congrats-message {
+  background-color: var(--dark);
+  color: var(--primary-light);
 }

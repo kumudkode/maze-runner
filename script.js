@@ -9,8 +9,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const genTimeElement = document.getElementById('gen-time');
     const solveTimeElement = document.getElementById('solve-time');
     const bestScoreElement = document.getElementById('best-score');
-    const toggleViewBtn = document.getElementById('toggle-view-btn');
     const themeToggleBtn = document.getElementById('theme-toggle');
+
+    // Add these variables to your existing script
+    let gameMode = 'standard';
+    let level = 1;
+    let timer = null;
+    let timeElapsed = 0;
+    let isPaused = false;
+    let soundEnabled = true;
+    let musicEnabled = true;
+
+    // Elements
+    const standardModeBtn = document.getElementById('standard-mode');
+    const timeDisplay = document.getElementById('time-display');
+    const soundToggleBtn = document.getElementById('sound-toggle');
+    const musicToggleBtn = document.getElementById('music-toggle');
+    const pauseMenu = document.getElementById('pause-menu');
+    const resumeBtn = document.getElementById('resume-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const helpBtn = document.getElementById('help-btn');
 
     // Maze configuration
     let maze = [];
@@ -40,18 +58,36 @@ document.addEventListener('DOMContentLoaded', () => {
     sizeSlider.addEventListener('input', updateSizeDisplay);
     sizeSlider.addEventListener('change', generateMaze);
     document.addEventListener('keydown', handleKeyPress);
-    toggleViewBtn.addEventListener('click', toggleView);
     themeToggleBtn.addEventListener('click', toggleTheme);
-    
-    // Toggle between 2D and 3D view
-    function toggleView() {
-        document.body.classList.toggle('view-3d');
-        if (document.body.classList.contains('view-3d')) {
-            toggleViewBtn.textContent = 'Switch to 2D';
-        } else {
-            toggleViewBtn.textContent = 'Switch to 3D';
+
+    standardModeBtn.addEventListener('click', () => setGameMode('standard'));
+    soundToggleBtn.addEventListener('click', toggleSound);
+    musicToggleBtn.addEventListener('click', toggleMusic);
+    resumeBtn.addEventListener('click', resumeGame);
+    restartBtn.addEventListener('click', restartGame);
+    helpBtn.addEventListener('click', showHelp);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (isPaused) {
+                resumeGame();
+            } else {
+                pauseGame();
+            }
         }
-    }
+    });
+    
+    // Make sure this is called when the page loads
+    window.addEventListener('load', () => {
+        updateSizeDisplay();
+        generateMaze();
+    });
+
+    // Also make sure event listeners are properly set up
+    sizeSlider.addEventListener('change', () => {
+        updateSizeDisplay();
+        generateMaze();
+    });
     
     // Toggle between light and dark theme
     function toggleTheme() {
@@ -72,11 +108,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.style.setProperty('--maze-size', size);
         
         // Adjust cell size based on maze size for better visibility
-        const baseCellSize = Math.max(10, Math.min(30, Math.floor(500 / size)));
-        document.documentElement.style.setProperty('--base-cell-size', `${baseCellSize}px`);
+        const maxSize = Math.min(window.innerWidth * 0.8, window.innerHeight * 0.6);
+        const baseCellSize = Math.max(10, Math.min(30, Math.floor(maxSize / size)));
+        document.documentElement.style.setProperty('--cell-size', `${baseCellSize}px`);
     }
     
-    // Generate a new maze
+    // Simplify the game setup - remove difficulty levels and keep only size option
     function generateMaze() {
         const startTime = performance.now();
         
@@ -170,12 +207,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Render the maze in the DOM
+    // Render the maze in the DOM - fixed function
     function renderMaze() {
         // Clear the maze element
         mazeElement.innerHTML = '';
         
-        // Set the grid template
+        // Set CSS variables for maze dimensions
+        document.documentElement.style.setProperty('--maze-size', size);
+        
+        // Set the grid template explicitly
         mazeElement.style.gridTemplateColumns = `repeat(${size}, var(--cell-size))`;
         mazeElement.style.gridTemplateRows = `repeat(${size}, var(--cell-size))`;
         
@@ -193,23 +233,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (maze[y][x].walls.bottom) cell.classList.add('wall-bottom');
                 if (maze[y][x].walls.left) cell.classList.add('wall-left');
                 
-                // Mark start and end
+                // Mark start point
                 if (x === playerPosition.x && y === playerPosition.y) {
-                    cell.classList.add('start');
                     cell.classList.add('current');
                     
+                    // Create player
                     const player = document.createElement('div');
                     player.classList.add('player');
                     cell.appendChild(player);
                 }
                 
+                // Mark end point
                 if (x === endPosition.x && y === endPosition.y) {
                     cell.classList.add('end');
+                    
+                    // Create end marker
+                    const endMarker = document.createElement('div');
+                    endMarker.classList.add('end-marker');
+                    cell.appendChild(endMarker);
                 }
                 
                 mazeElement.appendChild(cell);
             }
         }
+        
+        // Update move counter position to ensure it's not overlapping
+        moveCounter.textContent = `Moves: ${moveCount}`;
     }
     
     // Solve the maze using A* algorithm
@@ -361,271 +410,58 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
     }
     
-    // Mobile touch controls
-    const mazeContainer = document.querySelector('.maze-container');
-    const dButtons = document.querySelectorAll('.d-btn');
-    
-    // Define touch variables
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchEndX = 0;
-    let touchEndY = 0;
-    const minSwipeDistance = 40; // Minimum distance for a swipe to register
-    
-    // Add event listeners for the on-screen d-pad buttons
-    dButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const direction = button.dataset.direction;
-            handleDirectionalInput(direction);
-        });
-        
-        // Add tactile feedback
-        button.addEventListener('touchstart', () => {
-            button.classList.add('pressed');
-        });
-        
-        button.addEventListener('touchend', () => {
-            button.classList.remove('pressed');
-        });
-    });
-    
-    // Add touch event listeners for swipe detection
-    mazeElement.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
-    }, { passive: false });
-    
-    mazeElement.addEventListener('touchend', (e) => {
-        touchEndX = e.changedTouches[0].screenX;
-        touchEndY = e.changedTouches[0].screenY;
-        handleSwipe();
-    }, { passive: false });
-    
-    // Prevent default touchmove behavior to avoid scrolling while trying to swipe
-    mazeElement.addEventListener('touchmove', (e) => {
-        if (Math.abs(e.changedTouches[0].screenY - touchStartY) > 10) {
-            e.preventDefault();
-        }
-    }, { passive: false });
-    
-    // Handle swipe gestures
-    function handleSwipe() {
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = touchEndY - touchStartY;
-        
-        // Check if the swipe is long enough
-        if (Math.abs(deltaX) < minSwipeDistance && Math.abs(deltaY) < minSwipeDistance) {
-            return; // Not a swipe, probably a tap
-        }
-        
-        // Determine swipe direction (use the largest delta)
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            // Horizontal swipe
-            if (deltaX > 0) {
-                handleDirectionalInput('right');
-            } else {
-                handleDirectionalInput('left');
-            }
-        } else {
-            // Vertical swipe
-            if (deltaY > 0) {
-                handleDirectionalInput('down');
-            } else {
-                handleDirectionalInput('up');
-            }
-        }
-    }
-    
-    // Process directional input from either keyboard, swipe, or buttons
-    function handleDirectionalInput(direction) {
-        if (solving) return;
-        
-        let newX = playerPosition.x;
-        let newY = playerPosition.y;
-        
-        switch (direction) {
-            case 'up':
-                if (!maze[playerPosition.y][playerPosition.x].walls.top) newY--;
-                break;
-            case 'right':
-                if (!maze[playerPosition.y][playerPosition.x].walls.right) newX++;
-                break;
-            case 'down':
-                if (!maze[playerPosition.y][playerPosition.x].walls.bottom) newY++;
-                break;
-            case 'left':
-                if (!maze[playerPosition.y][playerPosition.x].walls.left) newX--;
-                break;
-            default:
-                return;
-        }
-        
-        // Check if valid move and update player position
-        if (newX >= 0 && newX < size && newY >= 0 && newY < size) {
-            moveCount++;
-            moveCounter.textContent = `Moves: ${moveCount}`;
-            
-            // Enhanced trail effect
-            createEnhancedTrail(playerPosition.x, playerPosition.y);
-            
-            // Clear current position
-            const oldCell = getCellElement(playerPosition.x, playerPosition.y);
-            oldCell.classList.remove('current');
-            
-            // Update player position
-            playerPosition.x = newX;
-            playerPosition.y = newY;
-            
-            // Update new position
-            const newCell = getCellElement(playerPosition.x, playerPosition.y);
-            newCell.classList.add('current');
-            
-            // Move the player marker
-            if (oldCell.querySelector('.player')) {
-                const player = oldCell.querySelector('.player');
-                oldCell.removeChild(player);
-                newCell.appendChild(player);
-            }
-            
-            // Check if reached the end
-            if (playerPosition.x === endPosition.x && playerPosition.y === endPosition.y) {
-                setTimeout(() => {
-                    celebrateVictory();
-                }, 300);
-            }
-        }
-    }
-    
-    // Handle keyboard navigation
-    function handleKeyPress(e) {
-        if (solving) return;
-        
-        // Prevent default scrolling behavior
-        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.key)) {
-            e.preventDefault();
-        }
-        
-        switch (e.key) {
-            case 'ArrowUp':
-                handleDirectionalInput('up');
-                break;
-            case 'ArrowRight':
-                handleDirectionalInput('right');
-                break;
-            case 'ArrowDown':
-                handleDirectionalInput('down');
-                break;
-            case 'ArrowLeft':
-                handleDirectionalInput('left');
-                break;
-            case ' ': // Space bar
-                solveMaze();
-                break;
-            case 'r':
-            case 'R':
-                generateMaze();
-                break;
-            case 'v':
-            case 'V':
-                toggleView();
-                break;
-            case 't':
-            case 'T':
-                toggleTheme();
-                break;
-            default:
-                return;
-        }
-    }
-    
-    // Create victory celebration
+    // Simplified victory celebration with just confetti
     function celebrateVictory() {
         // Create confetti
         for (let i = 0; i < 100; i++) {
             const confetti = document.createElement('div');
             confetti.className = 'confetti-piece';
             
-            // Random colors and positions
-            const colors = ['--primary', '--secondary', '--success', '#FFD700', '#FF4500'];
-            confetti.style.setProperty('--confetti-color', colors[Math.floor(Math.random() * colors.length)]);
-            confetti.style.left = `${Math.random() * 100}%`;
-            confetti.style.width = `${5 + Math.random() * 10}px`;
-            confetti.style.height = `${5 + Math.random() * 10}px`;
-            confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+            // Random shapes
+            if (i % 10 === 0) {
+                confetti.style.borderRadius = '0';
+            } else if (i % 7 === 0) {
+                confetti.style.borderRadius = '50%';
+            }
             
-            // Animation
+            // Random colors
+            const colors = [
+                'var(--primary)', 'var(--secondary)', 'var(--success)', 
+                '#FFD700', '#FF4500'
+            ];
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            
+            // Random positions
+            confetti.style.left = `${Math.random() * 100}%`;
             confetti.style.animation = `confetti ${1 + Math.random() * 2}s forwards`;
-            confetti.style.animationDelay = `${Math.random() * 0.5}s`;
             
             document.querySelector('.maze-container').appendChild(confetti);
             setTimeout(() => confetti.remove(), 3000);
         }
-        
-        // Display victory message
-        alert('Congratulations! You solved the maze!');
         
         // Update best score
         if (moveCount < bestMoves) {
             bestMoves = moveCount;
             localStorage.setItem('mazeBestMoves', bestMoves);
             bestScoreElement.textContent = bestMoves;
-            
-            const announcement = document.createElement('div');
-            announcement.textContent = 'New Best Score!';
-            announcement.style.position = 'absolute';
-            announcement.style.top = '40%';
-            announcement.style.left = '50%';
-            announcement.style.transform = 'translate(-50%, -50%)';
-            announcement.style.background = 'white';
-            announcement.style.padding = '1rem 2rem';
-            announcement.style.borderRadius = '8px';
-            announcement.style.fontWeight = 'bold';
-            announcement.style.color = 'var(--success)';
-            announcement.style.zIndex = '100';
-            announcement.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
-            
-            document.querySelector('.maze-container').appendChild(announcement);
-            setTimeout(() => announcement.remove(), 3000);
         }
         
-        // Generate new maze after celebration
+        // Show a congratulation message
+        const congratsMessage = document.createElement('div');
+        congratsMessage.className = 'congrats-message';
+        congratsMessage.textContent = 'Congratulations!';
+        document.querySelector('.maze-container').appendChild(congratsMessage);
+        
+        // Generate a new maze after a short delay
         setTimeout(() => {
-            generateMaze();
-        }, 1500);
-    }
-    
-    // Enhanced trail effect
-    function createEnhancedTrail(x, y) {
-        const oldCell = getCellElement(x, y);
-        
-        // Create main trail
-        const trail = document.createElement('div');
-        trail.className = 'trail';
-        oldCell.appendChild(trail);
-        
-        // Create a couple more smaller particles
-        for (let i = 0; i < 3; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'trail';
-            particle.style.width = `${10 + Math.random() * 10}%`;
-            particle.style.height = `${10 + Math.random() * 10}%`;
-            particle.style.left = `${30 + Math.random() * 40}%`;
-            particle.style.top = `${30 + Math.random() * 40}%`;
-            particle.style.opacity = '0.7';
-            
-            oldCell.appendChild(particle);
-            setTimeout(() => {
-                if (particle.parentNode) {
-                    particle.parentNode.removeChild(particle);
-                }
-            }, 600 + Math.random() * 200);
-        }
-        
-        setTimeout(() => {
-            if (trail.parentNode) {
-                trail.parentNode.removeChild(trail);
+            // Remove the congratulation message
+            if (congratsMessage.parentNode) {
+                congratsMessage.parentNode.removeChild(congratsMessage);
             }
-        }, 1000);
+            
+            // Generate new maze
+            generateMaze();
+        }, 3000);
     }
     
     // Helper function to get cell element by coordinates
@@ -653,9 +489,32 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Show swipe hint for first-time users
             showSwipeHint();
-            
-            // Make sure we start in 2D mode on mobile for better initial experience
-            document.body.classList.remove('view-3d');
+        }
+        
+        // Add event listeners for mobile d-pad
+        const dPad = document.querySelector('.d-pad');
+        if (dPad) {
+            const buttons = dPad.querySelectorAll('.d-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const direction = btn.dataset.direction;
+                    
+                    switch (direction) {
+                        case 'up':
+                            movePlayer(0, -1, 'top');
+                            break;
+                        case 'right':
+                            movePlayer(1, 0, 'right');
+                            break;
+                        case 'down':
+                            movePlayer(0, 1, 'bottom');
+                            break;
+                        case 'left':
+                            movePlayer(-1, 0, 'left');
+                            break;
+                    }
+                });
+            });
         }
     }
     
@@ -674,5 +533,190 @@ document.addEventListener('DOMContentLoaded', () => {
             
             localStorage.setItem('swipeHintShown', 'true');
         }
+    }
+
+    // Setup game mode and functions
+    function setGameMode(mode) {
+        gameMode = mode;
+        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+        
+        switch(mode) {
+            case 'standard':
+                standardModeBtn.classList.add('active');
+                break;
+        }
+        
+        generateMaze();
+    }
+
+    // Timer functions
+    function startTimer() {
+        if (timer) clearInterval(timer);
+        timeElapsed = 0;
+        updateTimerDisplay();
+        
+        timer = setInterval(() => {
+            timeElapsed++;
+            updateTimerDisplay();
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const minutes = Math.floor(timeElapsed / 60).toString().padStart(2, '0');
+        const seconds = (timeElapsed % 60).toString().padStart(2, '0');
+        timeDisplay.textContent = `${minutes}:${seconds}`;
+    }
+
+    function stopTimer() {
+        if (timer) {
+            clearInterval(timer);
+            timer = null;
+        }
+    }
+
+    // Game state functions
+    function pauseGame() {
+        if (isPaused) return;
+        
+        isPaused = true;
+        stopTimer();
+        pauseMenu.classList.remove('hidden');
+    }
+
+    function resumeGame() {
+        isPaused = false;
+        startTimer();
+        pauseMenu.classList.add('hidden');
+    }
+
+    function restartGame() {
+        pauseMenu.classList.add('hidden');
+        isPaused = false;
+        generateMaze();
+    }
+
+    function showHelp() {
+        alert(`
+            Maze Runner Controls:
+            
+            - Arrow keys to move
+            - ESC to pause/resume
+            - Space to solve automatically
+        `);
+    }
+
+    // Victory check update
+    function checkVictory() {
+        if (playerPosition.x === endPosition.x && playerPosition.y === endPosition.y) {
+            setTimeout(() => {
+                celebrateVictory();
+            }, 300);
+            return true;
+        }
+        return false;
+    }
+
+    // Handle keyboard navigation
+    function handleKeyPress(e) {
+        if (solving || isPaused) return;
+        
+        // Prevent default scrolling behavior
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.key)) {
+            e.preventDefault();
+        }
+        
+        switch (e.key) {
+            case 'ArrowUp':
+                movePlayer(0, -1, 'top');
+                break;
+            case 'ArrowRight':
+                movePlayer(1, 0, 'right');
+                break;
+            case 'ArrowDown':
+                movePlayer(0, 1, 'bottom');
+                break;
+            case 'ArrowLeft':
+                movePlayer(-1, 0, 'left');
+                break;
+            case ' ': // Space bar
+                solveMaze();
+                break;
+            case 'r':
+            case 'R':
+                generateMaze();
+                break;
+            case 't':
+            case 'T':
+                toggleTheme();
+                break;
+            case 'Escape':
+                if (isPaused) {
+                    resumeGame();
+                } else {
+                    pauseGame();
+                }
+                break;
+        }
+    }
+
+    // Move player based on direction
+    function movePlayer(dx, dy, wallDirection) {
+        // Check if there's a wall in the direction we want to move
+        if (maze[playerPosition.y][playerPosition.x].walls[wallDirection]) {
+            return; // Can't move through walls
+        }
+        
+        // Calculate new position
+        const newX = playerPosition.x + dx;
+        const newY = playerPosition.y + dy;
+        
+        // Check if valid position
+        if (newX >= 0 && newX < size && newY >= 0 && newY < size) {
+            // Create trail effect
+            createTrail(playerPosition.x, playerPosition.y);
+            
+            // Update move counter
+            moveCount++;
+            moveCounter.textContent = `Moves: ${moveCount}`;
+            
+            // Remove player from current cell
+            const currentCell = getCellElement(playerPosition.x, playerPosition.y);
+            currentCell.classList.remove('current');
+            const player = currentCell.querySelector('.player');
+            if (player) {
+                currentCell.removeChild(player);
+            }
+            
+            // Update player position
+            playerPosition.x = newX;
+            playerPosition.y = newY;
+            
+            // Update new cell
+            const newCell = getCellElement(newX, newY);
+            newCell.classList.add('current');
+            
+            // Add player to new cell
+            const newPlayer = document.createElement('div');
+            newPlayer.classList.add('player');
+            newCell.appendChild(newPlayer);
+            
+            // Check if we've reached the end
+            checkVictory();
+        }
+    }
+
+    // Create trail effect
+    function createTrail(x, y) {
+        const cell = getCellElement(x, y);
+        const trail = document.createElement('div');
+        trail.className = 'trail';
+        cell.appendChild(trail);
+        
+        // Remove trail after animation completes
+        setTimeout(() => {
+            if (trail.parentNode) {
+                trail.parentNode.removeChild(trail);
+            }
+        }, 1000);
     }
 });
