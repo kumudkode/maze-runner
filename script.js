@@ -608,13 +608,38 @@ document.addEventListener('DOMContentLoaded', () => {
     
     footer.appendChild(themeToggle);
 
-    // Show a swipe hint for first-time mobile users
+    // Mobile experience initialization
+    function initializeMobileExperience() {
+        // Check if on mobile
+        const isMobile = ('ontouchstart' in window) || window.matchMedia('(max-width: 768px)').matches;
+        
+        if (isMobile) {
+            // Add visual feedback for D-pad buttons
+            const dButtons = document.querySelectorAll('.d-btn');
+            dButtons.forEach(button => {
+                button.addEventListener('touchstart', () => {
+                    button.classList.add('pressed');
+                });
+                
+                button.addEventListener('touchend', () => {
+                    button.classList.remove('pressed');
+                });
+            });
+            
+            // Show swipe hint for first-time users
+            showSwipeHint();
+            
+            // Set a CSS variable for maze size to use in responsive calculations
+            document.documentElement.style.setProperty('--maze-size', size);
+        }
+    }
+
+    // First-time user swipe hint
     function showSwipeHint() {
-        if (!localStorage.getItem('swipeHintShown') && 
-            (('ontouchstart' in window) || window.matchMedia('(max-width: 768px)').matches)) {
+        if (!localStorage.getItem('swipeHintShown')) {
             const hint = document.createElement('div');
             hint.className = 'swipe-hint';
-            mazeElement.appendChild(hint);
+            document.querySelector('.maze-container').appendChild(hint);
             
             setTimeout(() => {
                 if (hint.parentNode) {
@@ -626,40 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Call this after maze generation
-    function initializeMobileExperience() {
-        // Check if on mobile
-        const isMobile = ('ontouchstart' in window) || window.matchMedia('(max-width: 768px)').matches;
-        
-        if (isMobile) {
-            // Add visual feedback for D-pad buttons
-            dButtons.forEach(button => {
-                button.addEventListener('touchstart', () => {
-                    button.classList.add('pressed');
-                });
-                
-                button.addEventListener('touchend', () => {
-                    button.classList.remove('pressed');
-                    setTimeout(() => button.classList.remove('pressed'), 150);
-                });
-            });
-            
-            // Add tilt effect based on device orientation if supported
-            if (window.DeviceOrientationEvent) {
-                window.addEventListener('deviceorientation', (event) => {
-                    const tiltX = Math.min(Math.max((event.gamma || 0) / 3, -10), 10);
-                    const tiltY = Math.min(Math.max((event.beta || 0) / 3, -10), 10);
-                    
-                    mazeElement.style.transform = `rotateX(${10 - tiltY}deg) rotateY(${tiltX}deg)`;
-                });
-            }
-            
-            // Show the swipe hint
-            showSwipeHint();
-        }
-    }
-
-    // Enhanced trail effect with particle burst
+    // Enhanced trail effect
     function createEnhancedTrail(x, y) {
         const oldCell = getCellElement(x, y);
         
@@ -670,12 +662,12 @@ document.addEventListener('DOMContentLoaded', () => {
         trail.style.top = '40%';
         oldCell.appendChild(trail);
         
-        // Create additional particles for a more dynamic effect
-        for (let i = 0; i < 5; i++) {
+        // Create a couple more smaller particles
+        for (let i = 0; i < 3; i++) {
             const particle = document.createElement('div');
             particle.className = 'trail';
-            particle.style.width = `${10 + Math.random() * 15}%`;
-            particle.style.height = `${10 + Math.random() * 15}%`;
+            particle.style.width = `${10 + Math.random() * 10}%`;
+            particle.style.height = `${10 + Math.random() * 10}%`;
             particle.style.left = `${30 + Math.random() * 40}%`;
             particle.style.top = `${30 + Math.random() * 40}%`;
             particle.style.opacity = '0.7';
@@ -685,7 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (particle.parentNode) {
                     particle.parentNode.removeChild(particle);
                 }
-            }, 800 + Math.random() * 200);
+            }, 600 + Math.random() * 200);
         }
         
         setTimeout(() => {
