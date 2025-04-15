@@ -1,12 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     // DOM elements
     const mazeElement = document.getElementById('maze');
+    const mazeWrapper = document.getElementById('maze-wrapper');
     const generateBtn = document.getElementById('generate-btn');
     const solveBtn = document.getElementById('solve-btn');
     const sizeSlider = document.getElementById('size-slider');
     const sizeValue = document.getElementById('size-value');
     const genTimeElement = document.getElementById('gen-time');
     const solveTimeElement = document.getElementById('solve-time');
+    const bestScoreElement = document.getElementById('best-score');
+    const toggleViewBtn = document.getElementById('toggle-view-btn');
+    const themeToggleBtn = document.getElementById('theme-toggle');
 
     // Maze configuration
     let maze = [];
@@ -15,7 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let endPosition = { x: 0, y: 0 };
     let solving = false;
     let moveCount = 0;
-    let bestMoves = Infinity;
+    let bestMoves = localStorage.getItem('mazeBestMoves') ? parseInt(localStorage.getItem('mazeBestMoves')) : Infinity;
+
+    // Update best score display
+    bestScoreElement.textContent = bestMoves === Infinity ? '-' : bestMoves;
 
     // Add move counter to maze container
     const moveCounter = document.createElement('div');
@@ -33,15 +40,40 @@ document.addEventListener('DOMContentLoaded', () => {
     sizeSlider.addEventListener('input', updateSizeDisplay);
     sizeSlider.addEventListener('change', generateMaze);
     document.addEventListener('keydown', handleKeyPress);
+    toggleViewBtn.addEventListener('click', toggleView);
+    themeToggleBtn.addEventListener('click', toggleTheme);
     
-    // Updates the size display and resets cell size variable
+    // Toggle between 2D and 3D view
+    function toggleView() {
+        document.body.classList.toggle('view-3d');
+        if (document.body.classList.contains('view-3d')) {
+            toggleViewBtn.textContent = 'Switch to 2D';
+        } else {
+            toggleViewBtn.textContent = 'Switch to 3D';
+        }
+    }
+    
+    // Toggle between light and dark theme
+    function toggleTheme() {
+        document.body.classList.toggle('dark-theme');
+        if (document.body.classList.contains('dark-theme')) {
+            themeToggleBtn.textContent = 'Switch to Light Mode';
+        } else {
+            themeToggleBtn.textContent = 'Switch to Dark Mode';
+        }
+    }
+
+    // Updates the size display and CSS variables
     function updateSizeDisplay() {
         size = parseInt(sizeSlider.value);
         sizeValue.textContent = `${size}×${size}`;
         
+        // Update CSS variables for responsive sizing
+        document.documentElement.style.setProperty('--maze-size', size);
+        
         // Adjust cell size based on maze size for better visibility
-        const cellSize = Math.min(600 / size, 36);
-        document.documentElement.style.setProperty('--cell-size', `${cellSize}px`);
+        const baseCellSize = Math.max(10, Math.min(30, Math.floor(500 / size)));
+        document.documentElement.style.setProperty('--base-cell-size', `${baseCellSize}px`);
     }
     
     // Generate a new maze
@@ -61,7 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     x,
                     y, 
                     walls: { top: true, right: true, bottom: true, left: true },
-                    visited: false
+                    visited: false,
+                    g: Infinity,
+                    f: Infinity,
+                    parent: null
                 });
             }
             maze.push(row);
@@ -152,9 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 cell.dataset.x = x;
                 cell.dataset.y = y;
                 
-                // Set row index for parallax effect
-                cell.style.setProperty('--row-index', y);
-                
                 // Apply walls as classes
                 if (maze[y][x].walls.top) cell.classList.add('wall-top');
                 if (maze[y][x].walls.right) cell.classList.add('wall-right');
@@ -178,9 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 mazeElement.appendChild(cell);
             }
         }
-        
-        // Set maze size for parallax effect
-        mazeElement.style.setProperty('--maze-size', size);
     }
     
     // Solve the maze using A* algorithm
@@ -295,17 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const cellElement = getCellElement(node.x, node.y);
                     cellElement.classList.add('path');
                     
-                    // If this is the player's new position, move the player
-                    if (i === path.length - 1) {
-                        const oldCell = getCellElement(playerPosition.x, playerPosition.y);
-                        oldCell.classList.remove('current');
-                        
-                        // Update player position
-                        playerPosition.x = node.x;
-                        playerPosition.y = node.y;
-                        cellElement.classList.add('current');
-                    }
-                    
                     await delay(50);
                 }
             }
@@ -352,13 +370,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let touchStartY = 0;
     let touchEndX = 0;
     let touchEndY = 0;
-    const minSwipeDistance = 50; // Minimum distance for a swipe to register
+    const minSwipeDistance = 40; // Minimum distance for a swipe to register
     
     // Add event listeners for the on-screen d-pad buttons
     dButtons.forEach(button => {
         button.addEventListener('click', () => {
             const direction = button.dataset.direction;
             handleDirectionalInput(direction);
+        });
+        
+        // Add tactile feedback
+        button.addEventListener('touchstart', () => {
+            button.classList.add('pressed');
+        });
+        
+        button.addEventListener('touchend', () => {
+            button.classList.remove('pressed');
         });
     });
     
@@ -433,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
         }
         
-        // Check if valid move and update player position (existing move logic)
+        // Check if valid move and update player position
         if (newX >= 0 && newX < size && newY >= 0 && newY < size) {
             moveCount++;
             moveCounter.textContent = `Moves: ${moveCount}`;
@@ -463,9 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Check if reached the end
             if (playerPosition.x === endPosition.x && playerPosition.y === endPosition.y) {
                 setTimeout(() => {
-                    alert('Congratulations! You solved the maze!');
                     celebrateVictory();
-                    generateMaze();
                 }, 300);
             }
         }
@@ -475,8 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleKeyPress(e) {
         if (solving) return;
         
-        // Add this line to prevent default scrolling behavior
-        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        // Prevent default scrolling behavior
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.key)) {
             e.preventDefault();
         }
         
@@ -492,6 +517,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'ArrowLeft':
                 handleDirectionalInput('left');
+                break;
+            case ' ': // Space bar
+                solveMaze();
+                break;
+            case 'r':
+            case 'R':
+                generateMaze();
+                break;
+            case 'v':
+            case 'V':
+                toggleView();
+                break;
+            case 't':
+            case 'T':
+                toggleTheme();
                 break;
             default:
                 return;
@@ -521,10 +561,14 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => confetti.remove(), 3000);
         }
         
+        // Display victory message
+        alert('Congratulations! You solved the maze!');
+        
         // Update best score
         if (moveCount < bestMoves) {
             bestMoves = moveCount;
             localStorage.setItem('mazeBestMoves', bestMoves);
+            bestScoreElement.textContent = bestMoves;
             
             const announcement = document.createElement('div');
             announcement.textContent = 'New Best Score!';
@@ -543,114 +587,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('.maze-container').appendChild(announcement);
             setTimeout(() => announcement.remove(), 3000);
         }
-    }
-    
-    // Helper function to get cell element by coordinates
-    function getCellElement(x, y) {
-        return document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-    }
-    
-    // Fisher-Yates shuffle algorithm
-    function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    }
-    
-    // Enable interactive light effect
-    mazeElement.addEventListener('mousemove', (e) => {
-        const rect = mazeElement.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
         
-        document.querySelector('.maze-container').style.setProperty(
-            '--light-position', `${x}% ${y}%`
-        );
-    });
-    
-    // Add theme toggle for UI
-    const footer = document.querySelector('.footer');
-    const themeToggle = document.createElement('button');
-    themeToggle.classList.add('btn');
-    themeToggle.style.marginTop = '1rem';
-    themeToggle.style.padding = '0.5rem 1rem';
-    themeToggle.style.fontSize = '0.9rem';
-    themeToggle.textContent = 'Toggle Dark Mode';
-    
-    themeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('dark-theme');
-        if (document.body.classList.contains('dark-theme')) {
-            document.documentElement.style.setProperty('--floor-color', '#1a202c');
-            document.documentElement.style.setProperty('--wall-color', '#4a5568');
-            document.documentElement.style.setProperty('--wall-highlight', '#718096');
-            document.documentElement.style.setProperty('--wall-shadow', '#2d3748');
-            document.body.style.background = 'linear-gradient(135deg, #1a202c 0%, #2d3748 100%)';
-            document.body.style.color = '#f7fafc';
-            
-            // Update specific UI elements if needed
-            moveCounter.style.backgroundColor = '#2d3748';
-            moveCounter.style.color = '#f7fafc';
-        } else {
-            document.documentElement.style.setProperty('--floor-color', '#f0f4f8');
-            document.documentElement.style.setProperty('--wall-color', '#34495e');
-            document.documentElement.style.setProperty('--wall-highlight', '#5d7ea1');
-            document.documentElement.style.setProperty('--wall-shadow', '#293542');
-            document.body.style.background = 'linear-gradient(135deg, #f6f9fc 0%, #e9f1f7 100%)';
-            document.body.style.color = '#2d3748';
-            
-            // Reset UI elements
-            moveCounter.style.backgroundColor = 'white';
-            moveCounter.style.color = 'var(--dark)';
-        }
-    });
-    
-    footer.appendChild(themeToggle);
-
-    // Mobile experience initialization
-    function initializeMobileExperience() {
-        // Check if on mobile
-        const isMobile = ('ontouchstart' in window) || window.matchMedia('(max-width: 768px)').matches;
-        
-        if (isMobile) {
-            // Add visual feedback for D-pad buttons
-            const dButtons = document.querySelectorAll('.d-btn');
-            dButtons.forEach(button => {
-                button.addEventListener('touchstart', () => {
-                    button.classList.add('pressed');
-                });
-                
-                button.addEventListener('touchend', () => {
-                    button.classList.remove('pressed');
-                });
-            });
-            
-            // Show swipe hint for first-time users
-            showSwipeHint();
-            
-            // Set a CSS variable for maze size to use in responsive calculations
-            document.documentElement.style.setProperty('--maze-size', size);
-        }
+        // Generate new maze after celebration
+        setTimeout(() => {
+            generateMaze();
+        }, 1500);
     }
-
-    // First-time user swipe hint
-    function showSwipeHint() {
-        if (!localStorage.getItem('swipeHintShown')) {
-            const hint = document.createElement('div');
-            hint.className = 'swipe-hint';
-            document.querySelector('.maze-container').appendChild(hint);
-            
-            setTimeout(() => {
-                if (hint.parentNode) {
-                    hint.parentNode.removeChild(hint);
-                }
-            }, 3000);
-            
-            localStorage.setItem('swipeHintShown', 'true');
-        }
-    }
-
+    
     // Enhanced trail effect
     function createEnhancedTrail(x, y) {
         const oldCell = getCellElement(x, y);
@@ -658,8 +601,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create main trail
         const trail = document.createElement('div');
         trail.className = 'trail';
-        trail.style.left = '40%';
-        trail.style.top = '40%';
         oldCell.appendChild(trail);
         
         // Create a couple more smaller particles
@@ -685,5 +626,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 trail.parentNode.removeChild(trail);
             }
         }, 1000);
+    }
+    
+    // Helper function to get cell element by coordinates
+    function getCellElement(x, y) {
+        return document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+    }
+    
+    // Fisher-Yates shuffle algorithm
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+    
+    // Mobile experience initialization
+    function initializeMobileExperience() {
+        // Check if on mobile
+        const isMobile = ('ontouchstart' in window) || window.matchMedia('(max-width: 768px)').matches;
+        
+        if (isMobile) {
+            // Show touch controls
+            document.querySelector('.mobile-controls').style.display = 'block';
+            
+            // Show swipe hint for first-time users
+            showSwipeHint();
+            
+            // Make sure we start in 2D mode on mobile for better initial experience
+            document.body.classList.remove('view-3d');
+        }
+    }
+    
+    // First-time user swipe hint
+    function showSwipeHint() {
+        if (!localStorage.getItem('swipeHintShown')) {
+            const hint = document.createElement('div');
+            hint.className = 'swipe-hint';
+            document.querySelector('#maze-wrapper').appendChild(hint);
+            
+            setTimeout(() => {
+                if (hint.parentNode) {
+                    hint.parentNode.removeChild(hint);
+                }
+            }, 3000);
+            
+            localStorage.setItem('swipeHintShown', 'true');
+        }
     }
 });
