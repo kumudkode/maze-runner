@@ -14,20 +14,23 @@
             <p class="subtitle">Maze Generator & Solver</p>
         </header>
 
-        <div class="controls">
-            <button id="generate-btn" class="btn">Generate New Maze</button>
-            <button id="solve-btn" class="btn">Solve Maze</button>
+        <div class="game-controls">
+            <button id="generate-btn" class="btn primary-btn">Generate New Maze</button>
+            <button id="solve-btn" class="btn secondary-btn">Solve Maze</button>
             <div class="settings">
                 <label for="size-slider">Size:</label>
                 <input type="range" id="size-slider" min="5" max="30" value="15">
                 <span id="size-value">15×15</span>
             </div>
+            <button id="toggle-view-btn" class="btn">2D/3D View</button>
         </div>
 
         <div class="maze-container">
-            <div class="start-point"></div>
-            <div id="maze"></div>
-            <div class="end-point"></div>
+            <div id="maze-wrapper">
+                <div class="start-point"></div>
+                <div id="maze"></div>
+                <div class="end-point"></div>
+            </div>
             
             <div class="mobile-controls">
                 <div class="d-pad">
@@ -48,11 +51,16 @@
                 <span class="stat-label">Solution Time:</span>
                 <span id="solve-time">0.0s</span>
             </div>
+            <div class="stat">
+                <span class="stat-label">Best Score:</span>
+                <span id="best-score">-</span>
+            </div>
         </div>
 
         <div class="footer">
             <p>Use arrow keys to navigate the maze manually</p>
-            <p>Use view controls to rotate the perspective</p>
+            <p>Swipe or use on-screen controls on touch devices</p>
+            <button id="theme-toggle" class="btn theme-btn">Toggle Dark Mode</button>
         </div>
     </div>
 
