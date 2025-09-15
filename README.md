@@ -1,5 +1,5 @@
 Maze Runner: Live here https://kumudkode.github.io/maze-runner/
-🪄🔮
+ 🪄🔮<br>
 Interactive Maze Generator & Solver with Algorithm Visualization
 Maze Runner is a fully interactive web application that generates random mazes and visualizes pathfinding algorithms in real-time. Built with vanilla JavaScript, CSS, and HTML, this project demonstrates advanced front-end techniques without relying on any external libraries or frameworks.
 
